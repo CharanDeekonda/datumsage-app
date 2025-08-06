@@ -1,0 +1,8 @@
+# File: python-ai-service/requirements.txt
+langchain-experimental
+langchain-google-genai
+python-dotenv
+flask
+flask-cors
+pandas
+tabulate
