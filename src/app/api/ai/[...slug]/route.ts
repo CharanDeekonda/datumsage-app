@@ -1,89 +1,59 @@
-// File: src/app/api/ai/[...slug]/route.ts
+// File: src/app/api/ai/[...slug]/route.ts - FINAL VERSION
 
 import { NextResponse } from 'next/server';
 import axios, { AxiosError } from 'axios';
 import { NextRequest } from 'next/server';
 import FormData from 'form-data';
-import { writeFile } from 'fs/promises';
-import path from 'path';
-import jwt from 'jsonwebtoken';
-import mysql from 'mysql2/promise';
 
 // --- CONFIGURATION ---
-const PYTHON_API_URL = 'http://localhost:5001';
-const JWT_SECRET = process.env.JWT_SECRET || 'your-default-super-secret-key';
-const dbConfig = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_DATABASE,
-};
+// IMPORTANT: Make sure this is set in your Vercel Environment Variables
+const PYTHON_API_URL = process.env.PYTHON_API_URL;
 
-interface JwtPayload { userId: number; }
 interface ApiError { error: string; }
 
 // --- MAIN HANDLER ---
 async function handler(req: NextRequest) {
   try {
+    if (!PYTHON_API_URL) {
+      throw new Error("PYTHON_API_URL is not configured in environment variables.");
+    }
+
     const slug = req.nextUrl.pathname.replace('/api/ai/', '');
     const pythonUrl = `${PYTHON_API_URL}/${slug}`;
 
-    // --- UPLOAD LOGIC WITH PERSISTENT STORAGE ---
-    if (slug === 'upload' && req.method === 'POST') {
-      // 1. Authenticate user via JWT
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader?.startsWith('Bearer ')) {
-        return NextResponse.json({ error: 'Unauthorized: Missing token' }, { status: 401 });
-      }
-      const token = authHeader.split(' ')[1];
-      const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-      const userId = decoded.userId;
+    let response;
 
-      // 2. Process and save the file permanently
-      const formData = await req.formData();
-      const file = formData.get('file') as File;
-      if (!file) {
-        return NextResponse.json({ error: 'No file found in form data' }, { status: 400 });
-      }
+    if (req.method === 'POST') {
+      const contentType = req.headers.get('content-type') || '';
       
-      const buffer = await file.arrayBuffer();
-      const nodeBuffer = Buffer.from(buffer);
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
-      const filename = `${uniqueSuffix}-${file.name.replace(/\s/g, '_')}`;
-      const storagePath = path.join(process.cwd(), 'uploads', filename);
-      
-      await writeFile(storagePath, nodeBuffer);
+      // --- FORWARD FILE UPLOAD ---
+      if (contentType.includes('multipart/form-data')) {
+        const backendFormData = new FormData();
+        const frontendFormData = await req.formData();
+        const file = frontendFormData.get('file') as File;
 
-      // 3. Save file metadata to MySQL database
-      const connection = await mysql.createConnection(dbConfig);
-      const [result] = await connection.execute(
-        'INSERT INTO datasets (user_id, file_name, storage_path) VALUES (?, ?, ?)',
-        [userId, file.name, storagePath]
-      );
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const newDatasetId = (result as any).insertId;
-      await connection.end();
+        if (!file) {
+          return NextResponse.json({ error: 'No file found' }, { status: 400 });
+        }
 
-      // 4. Call Python service for initial analysis
-      const form = new FormData();
-      form.append('file', nodeBuffer, file.name);
-      const response = await axios.post(pythonUrl, form, {
-        headers: { ...form.getHeaders() },
-      });
+        const buffer = await file.arrayBuffer();
+        const nodeBuffer = Buffer.from(buffer);
+        backendFormData.append('file', nodeBuffer, file.name);
 
-      // 5. Return all necessary info to the frontend
-      response.data.newDataset = {
-          id: newDatasetId,
-          file_name: file.name,
-          upload_date: new Date().toISOString(),
-          storage_path: storagePath
-      };
-      return NextResponse.json(response.data);
+        response = await axios.post(pythonUrl, backendFormData, {
+          headers: { ...backendFormData.getHeaders() },
+        });
+
+      } else {
+        // --- FORWARD JSON DATA ---
+        const body = await req.json();
+        response = await axios.post(pythonUrl, body);
+      }
+    } else {
+      // Handle GET requests if any in the future
+      response = await axios.get(pythonUrl);
     }
 
-    // --- GENERIC PROXY LOGIC FOR OTHER ROUTES (query, visualize) ---
-    const body = await req.json();
-    const response = await axios.post(pythonUrl, body);
     return NextResponse.json(response.data);
 
   } catch (error) {
