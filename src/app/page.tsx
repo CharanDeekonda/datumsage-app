@@ -3,6 +3,7 @@
 import { redirect } from 'next/navigation';
 
 export default function HomePage() {
-  // Change this line to redirect to the dashboard
-  redirect('/dashboard');
+  // This will automatically redirect any visitor from the root URL ("/")
+  // to the "/login" page.
+  redirect('/login');
 }

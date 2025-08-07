@@ -1,4 +1,4 @@
-// File: src/app/dashboard/page.tsx - FINAL VERSION
+// File: src/app/dashboard/page.tsx
 
 'use client';
 
@@ -9,12 +9,6 @@ import { jwtDecode } from 'jwt-decode';
 
 // --- TYPE DEFINITIONS ---
 interface DecodedToken { email: string; }
-interface Dataset {
-  id: number;
-  file_name: string;
-  upload_date: string;
-  storage_path: string;
-}
 interface DatasetInfo {
   shape: [number, number];
   columns: string[];
@@ -39,10 +33,9 @@ export default function DashboardPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadStatus, setUploadStatus] = useState('');
   
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
-  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null);
-  
+  const [datasetId, setDatasetId] = useState<string | null>(null);
   const [datasetInfo, setDatasetInfo] = useState<DatasetInfo | null>(null);
+
   const [question, setQuestion] = useState('');
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [sqlQuery, setSqlQuery] = useState('');
@@ -53,21 +46,9 @@ export default function DashboardPage() {
 
   const router = useRouter();
 
-  // --- DATA FETCHING ---
-  const fetchDatasets = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        handleLogout();
-        return;
-    };
-    try {
-      const response = await axios.get('/api/datasets', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
-      setDatasets(response.data.datasets);
-    } catch (error) {
-      console.error('Failed to fetch datasets:', error);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    router.push('/login');
   };
 
   useEffect(() => {
@@ -76,15 +57,16 @@ export default function DashboardPage() {
       try {
         const decodedToken = jwtDecode<DecodedToken>(token);
         setUserEmail(decodedToken.email);
-        fetchDatasets();
-      } catch (error) { handleLogout(); }
+      } catch (error) { 
+        handleLogout();
+      }
     } else {
       router.push('/login');
     }
     setIsLoading(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  // --- EVENT HANDLERS ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) setSelectedFile(e.target.files[0]);
   };
@@ -95,46 +77,32 @@ export default function DashboardPage() {
     setUploadStatus('Uploading and analyzing...');
     const formData = new FormData();
     formData.append('file', selectedFile);
-    const token = localStorage.getItem('token');
+
     try {
       const response = await axios.post('/api/ai/upload', formData, {
-        headers: { 
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
-      // After upload, immediately switch to analysis view
-      await fetchDatasets();
-      setSelectedDataset(response.data.newDataset);
       setDatasetInfo(response.data.dataset_info);
-      setUploadStatus('');
-      setSelectedFile(null);
-
+      setDatasetId(response.data.dataset_id);
+      setUploadStatus('Analysis complete!');
     } catch (err) {
-        if (axios.isAxiosError(err)) {
-            const axiosError = err as AxiosError<ApiError>;
-            setUploadStatus(axiosError.response?.data?.error || 'Upload failed.');
-        } else {
-            setUploadStatus('An unexpected error occurred.');
-        }
+      if (axios.isAxiosError(err)) {
+        const axiosError = err as AxiosError<ApiError>;
+        setUploadStatus(axiosError.response?.data?.error || 'Upload or analysis failed.');
+      } else {
+        setUploadStatus('An unexpected error occurred.');
+      }
     }
-  };
-
-  const handleSelectDataset = async (dataset: Dataset) => {
-      setSelectedDataset(dataset);
-      // This is a placeholder for fetching initial analysis for an existing dataset
-      // For now, we just switch views.
   };
 
   const handleQuery = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!question || !selectedDataset) return;
+    if (!question || !datasetId) return;
     setIsQuerying(true);
     setQueryResult(null);
     try {
       const response = await axios.post('/api/ai/query', {
-        dataset_id: selectedDataset.storage_path, // Use the permanent path
+        dataset_id: datasetId,
         query: question,
       });
       setQueryResult(response.data.result);
@@ -147,12 +115,12 @@ export default function DashboardPage() {
   };
 
   const handleVisualize = async () => {
-    if (!selectedDataset) return;
+    if (!datasetId) return;
     setIsVisualizing(true);
     setVisualizations([]);
     try {
         const response = await axios.post('/api/ai/visualize', {
-            dataset_id: selectedDataset.storage_path
+            dataset_id: datasetId
         });
         setVisualizations(response.data.visualizations);
     } catch (err) {
@@ -162,28 +130,22 @@ export default function DashboardPage() {
     }
   };
   
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    router.push('/login');
-  };
-
-  // --- RENDER LOGIC ---
   if (isLoading) {
     return <div className="flex items-center justify-center h-screen text-white"><p>Loading...</p></div>;
   }
 
   return (
     <div className="min-h-screen text-white">
-      <nav className="border-white/10 backdrop-blur-lg sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
-            <div className="flex justify-between h-16">
+      <nav className="bg-black/30 border-b border-white/10 backdrop-blur-lg sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between h-18 ">
                 <div className="flex items-center">
-                    <h1 className=" mt-5 ml-9 text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">DatumSage</h1>
+                    <h1 className="ml-5 text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">DatumSage</h1>
                 </div>
-                {/* <div className="flex items-center">
+                <div className="flex items-center">
                     <span className="text-sm text-gray-300 mr-4 hidden sm:block">{userEmail}</span>
                     <button onClick={handleLogout} className="px-3 py-2 text-sm font-medium bg-white/10 rounded-md hover:bg-white/20 transition-colors">Logout</button>
-                </div> */}
+                </div>
             </div>
         </div>
       </nav>
@@ -191,15 +153,27 @@ export default function DashboardPage() {
       <main className="py-10">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
           
-          {selectedDataset ? (
-            // --- ANALYSIS VIEW ---
+          {!datasetId ? (
+            <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(0,0,255,0.5)' }}>
+              <h2 className="text-2xl font-semibold mb-4">Upload File</h2>
+              <p className="text-gray-400 mb-6">Upload a CSV, TSV, or Excel file to begin your analysis.</p>
+              <form onSubmit={handleUpload}>
+                <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                  <input type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" accept=".csv,.xlsx,.tsv" />
+                  <button type="submit" className="w-full sm:w-auto px-6 py-3 text-sm font-medium bg-white text-[#080710] rounded-md hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={!selectedFile || uploadStatus.includes('Uploading')}>
+                    {uploadStatus.includes('Uploading') ? 'Processing...' : 'Upload & Analyze'}
+                  </button>
+                </div>
+              </form>
+              {uploadStatus && <p className="mt-4 text-sm text-gray-400">{uploadStatus}</p>}
+            </div>
+          ) : (
             <>
-              <button onClick={() => { setSelectedDataset(null); setDatasetInfo(null); }} className="text-sm text-gray-400 hover:text-white mb-4">&larr; Back to Datasets</button>
+              <button onClick={() => { setDatasetId(null); setDatasetInfo(null); }} className="text-sm text-gray-400 hover:text-white mb-4">&larr; Upload a different file</button>
               
-              {/* Dataset Overview */}
               {datasetInfo && (
                 <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(255, 0, 0, 0.4)' }}>
-                  <h2 className="text-2xl font-semibold mb-4">Dataset Overview: <span className="text-purple-400">{selectedDataset.file_name}</span></h2>
+                  <h2 className="text-2xl font-semibold mb-4">Dataset Overview</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <p><strong>Shape:</strong> {datasetInfo.shape[0]} rows, {datasetInfo.shape[1]} columns</p>
                       <p><strong>Columns:</strong> {datasetInfo.columns.join(', ')}</p>
@@ -218,7 +192,6 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Natural Language Query */}
               <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(0, 153, 208, 0.4)' }}>
                 <h2 className="text-2xl font-semibold mb-4">Ask a Question</h2>
                 <form onSubmit={handleQuery}>
@@ -250,7 +223,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* Visualizations */}
               <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(255, 213, 0, 0.4)' }}>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-semibold">Automatic Visualizations</h2>
@@ -268,50 +240,6 @@ export default function DashboardPage() {
                     ))}
                 </div>
               </div>
-            </>
-          ) : null}
-          
-          {/* This section now only shows when no dataset is selected */}
-          {!selectedDataset && (
-            <>
-              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(0,0,255,0.5)' }}>
-                <h2 className="text-2xl mt-5 font-semibold mb-4">Upload File</h2>
-                <p className="text-gray-400 mb-6">Upload a CSV, TSV, or Excel file to begin your analysis.</p>
-                <form onSubmit={handleUpload}>
-                  <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
-                    <input type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" accept=".csv,.xlsx,.tsv" />
-                    <button type="submit" className="w-full sm:w-auto px-6 py-3 text-sm font-medium bg-white text-[#080710] rounded-md hover:bg-gray-200 disabled:opacity-50 transition-colors" disabled={!selectedFile || uploadStatus.includes('Uploading')}>
-                      {uploadStatus.includes('Uploading') ? 'Processing...' : 'Upload & Analyze'}
-                    </button>
-                  </div>
-                </form>
-                {uploadStatus && <p className="mt-4 text-sm text-gray-400">{uploadStatus}</p>}
-              </div>
-
-              {/* <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
-                <h2 className="text-2xl font-semibold">Your Datasets</h2>
-                <div className="mt-4">
-                  {datasets.length === 0 ? (
-                    <p className="text-gray-400">You have not uploaded any datasets yet.</p>
-                  ) : (
-                    <ul className="divide-y divide-white/10">
-                      {datasets.map((dataset) => (
-                        <li key={dataset.id} className="py-4 flex justify-between items-center">
-                          <div>
-                            <p className="text-md font-medium">{dataset.file_name}</p>
-                            <p className="text-sm text-gray-400">
-                              Uploaded on: {new Date(dataset.upload_date).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <button onClick={() => handleSelectDataset(dataset)} className="px-4 py-2 text-sm font-medium bg-white/10 rounded-md hover:bg-white/20 transition-colors">
-                            Analyze
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div> */}
             </>
           )}
         </div>

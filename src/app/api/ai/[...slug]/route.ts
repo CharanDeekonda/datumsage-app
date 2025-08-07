@@ -1,51 +1,58 @@
-// File: src/app/api/ai/[...slug]/route.ts - FINAL VERSION
+// File: src/app/api/ai/[...slug]/route.ts
 
 import { NextResponse } from 'next/server';
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError } from 'axios'; // Import AxiosError
 import { NextRequest } from 'next/server';
 import FormData from 'form-data';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Readable } from 'stream';
 
-// --- CONFIGURATION ---
-// IMPORTANT: Make sure this is set in your Vercel Environment Variables
-const PYTHON_API_URL = process.env.PYTHON_API_URL;
+// The base URL of our running Python AI service
+const PYTHON_API_URL = 'http://localhost:5001';
 
-interface ApiError { error: string; }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+async function streamToBuffer(stream: ReadableStream<Uint8Array>): Promise<Buffer> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks);
+}
 
-// --- MAIN HANDLER ---
 async function handler(req: NextRequest) {
   try {
-    if (!PYTHON_API_URL) {
-      throw new Error("PYTHON_API_URL is not configured in environment variables.");
-    }
-
     const slug = req.nextUrl.pathname.replace('/api/ai/', '');
     const pythonUrl = `${PYTHON_API_URL}/${slug}`;
 
     let response;
 
     if (req.method === 'POST') {
+      // Check if it's a file upload (multipart/form-data)
       const contentType = req.headers.get('content-type') || '';
-      
-      // --- FORWARD FILE UPLOAD ---
       if (contentType.includes('multipart/form-data')) {
-        const backendFormData = new FormData();
-        const frontendFormData = await req.formData();
-        const file = frontendFormData.get('file') as File;
-
+        const formData = await req.formData();
+        const file = formData.get('file') as File;
+        
         if (!file) {
-          return NextResponse.json({ error: 'No file found' }, { status: 400 });
+            return NextResponse.json({ error: 'No file found in form data' }, { status: 400 });
         }
 
         const buffer = await file.arrayBuffer();
         const nodeBuffer = Buffer.from(buffer);
-        backendFormData.append('file', nodeBuffer, file.name);
 
-        response = await axios.post(pythonUrl, backendFormData, {
-          headers: { ...backendFormData.getHeaders() },
+        const form = new FormData();
+        form.append('file', nodeBuffer, file.name);
+
+        response = await axios.post(pythonUrl, form, {
+          headers: {
+            ...form.getHeaders(),
+          },
         });
-
       } else {
-        // --- FORWARD JSON DATA ---
+        // It's a regular JSON POST request
         const body = await req.json();
         response = await axios.post(pythonUrl, body);
       }
@@ -55,16 +62,17 @@ async function handler(req: NextRequest) {
     }
 
     return NextResponse.json(response.data);
-
   } catch (error) {
+    // This is the corrected, type-safe error handling block
     if (axios.isAxiosError(error)) {
-      const axiosError = error as AxiosError<ApiError>;
+      const axiosError = error as AxiosError<{ error: string }>;
       console.error('AI Proxy Error:', axiosError.response?.data || axiosError.message);
       return NextResponse.json(
         { error: axiosError.response?.data?.error || 'Error communicating with the AI service' },
         { status: axiosError.response?.status || 500 }
       );
     }
+    // Fallback for non-Axios errors
     console.error('AI Proxy Error (Unknown):', error);
     return NextResponse.json(
       { error: 'An unexpected internal error occurred' },
@@ -73,4 +81,4 @@ async function handler(req: NextRequest) {
   }
 }
 
-export { handler as POST };
+export { handler as GET, handler as POST };
