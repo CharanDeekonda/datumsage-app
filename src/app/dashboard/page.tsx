@@ -174,16 +174,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen text-white">
-      <nav className="border-white/10 backdrop-blur-lg sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
+      <nav className="bg-black/30 border-b border-white/10 backdrop-blur-lg sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between h-16">
                 <div className="flex items-center">
-                    <h1 className=" mt-5 ml-9 text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">DatumSage</h1>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">DatumSage</h1>
                 </div>
-                {/* <div className="flex items-center">
+                <div className="flex items-center">
                     <span className="text-sm text-gray-300 mr-4 hidden sm:block">{userEmail}</span>
                     <button onClick={handleLogout} className="px-3 py-2 text-sm font-medium bg-white/10 rounded-md hover:bg-white/20 transition-colors">Logout</button>
-                </div> */}
+                </div>
             </div>
         </div>
       </nav>
@@ -196,9 +196,8 @@ export default function DashboardPage() {
             <>
               <button onClick={() => { setSelectedDataset(null); setDatasetInfo(null); }} className="text-sm text-gray-400 hover:text-white mb-4">&larr; Back to Datasets</button>
               
-              {/* Dataset Overview */}
               {datasetInfo && (
-                <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(255, 0, 0, 0.4)' }}>
+                <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
                   <h2 className="text-2xl font-semibold mb-4">Dataset Overview: <span className="text-purple-400">{selectedDataset.file_name}</span></h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <p><strong>Shape:</strong> {datasetInfo.shape[0]} rows, {datasetInfo.shape[1]} columns</p>
@@ -218,8 +217,7 @@ export default function DashboardPage() {
                 </div>
               )}
 
-              {/* Natural Language Query */}
-              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(0, 153, 208, 0.4)' }}>
+              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
                 <h2 className="text-2xl font-semibold mb-4">Ask a Question</h2>
                 <form onSubmit={handleQuery}>
                   <div className="flex items-center space-x-4">
@@ -230,7 +228,7 @@ export default function DashboardPage() {
                   </div>
                 </form>
                 {queryResult && (
-                    <div className="mt-4 p-4 bg-white/5 rounded-md" style={{ boxShadow: '0 4px 24px 0 rgba(255, 255, 255, 0.3)' }}>
+                    <div className="mt-4 p-4 bg-white/5 rounded-md">
                         <h3 className="font-semibold mb-2">Query Result:</h3>
                         <div className="overflow-x-auto">
                             <table className="min-w-full text-xs text-left">
@@ -242,16 +240,15 @@ export default function DashboardPage() {
                                 </tbody>
                             </table>
                         </div>
-                        {/* <details className="mt-2 text-xs">
+                        <details className="mt-2 text-xs">
                             <summary className="cursor-pointer text-gray-400">Show SQL Query</summary>
                             <code className="block bg-black/50 p-2 rounded-md mt-1 text-gray-300">{sqlQuery}</code>
-                        </details> */}
+                        </details>
                     </div>
                 )}
               </div>
 
-              {/* Visualizations */}
-              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(255, 213, 0, 0.4)' }}>
+              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-semibold">Automatic Visualizations</h2>
                     <button onClick={handleVisualize} className="w-auto px-4 py-2 text-sm font-medium bg-white/10 rounded-md hover:bg-white/20 transition-colors" disabled={isVisualizing}>
@@ -269,14 +266,13 @@ export default function DashboardPage() {
                 </div>
               </div>
             </>
-          ) : null}
+          ):null}
           
           {/* This section now only shows when no dataset is selected */}
           {!selectedDataset && (
             <>
-              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(0,0,255,0.5)' }}>
-                <h2 className="text-2xl mt-5 font-semibold mb-4">Upload File</h2>
-                <p className="text-gray-400 mb-6">Upload a CSV, TSV, or Excel file to begin your analysis.</p>
+              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
+                <h2 className="text-2xl font-semibold mb-4">Upload New Dataset</h2>
                 <form onSubmit={handleUpload}>
                   <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
                     <input type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" accept=".csv,.xlsx,.tsv" />
@@ -288,7 +284,7 @@ export default function DashboardPage() {
                 {uploadStatus && <p className="mt-4 text-sm text-gray-400">{uploadStatus}</p>}
               </div>
 
-              {/* <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
+              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
                 <h2 className="text-2xl font-semibold">Your Datasets</h2>
                 <div className="mt-4">
                   {datasets.length === 0 ? (
@@ -311,7 +307,7 @@ export default function DashboardPage() {
                     </ul>
                   )}
                 </div>
-              </div> */}
+              </div>
             </>
           )}
         </div>
