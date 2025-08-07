@@ -1,11 +1,7 @@
-# File: python-ai-service/app.py - FINAL SIMPLIFIED VERSION
+# File: python-ai-service/app.py - FINAL ADVANCED VERSION
 
 import os
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from dotenv import load_dotenv
 import pandas as pd
-import sqlite3
 import uuid
 import io
 import base64
@@ -13,11 +9,14 @@ import matplotlib
 matplotlib.use('Agg') # Use a non-interactive backend for matplotlib
 import matplotlib.pyplot as plt
 import seaborn as sns
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from dotenv import load_dotenv
 from werkzeug.utils import secure_filename
 import tempfile
 
-# Import the necessary components from langchain
-from langchain_experimental.agents.agent_toolkits import create_csv_agent
+# --- THIS IS THE NEW, MORE POWERFUL AGENT ---
+from langchain_experimental.agents.agent_toolkits import create_pandas_dataframe_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Load environment variables from .env file
@@ -36,27 +35,29 @@ llm = ChatGoogleGenerativeAI(
 app = Flask(__name__)
 CORS(app) 
 
-# --- HELPER FUNCTIONS (for upload and visualize) ---
+# --- HELPER FUNCTIONS ---
 
 def load_dataset(file_path):
     """Load dataset based on file type"""
-    file_extension = file_path.split('.')[-1].lower()
-    if file_extension == 'csv':
+    file_extension = os.path.splitext(file_path)[1].lower()
+    if file_extension == '.csv':
         return pd.read_csv(file_path)
-    elif file_extension == 'xlsx':
+    elif file_extension == '.tsv':
+        return pd.read_csv(file_path, sep='\t')
+    elif file_extension == '.xlsx':
         return pd.read_excel(file_path)
     else:
-        raise ValueError("Unsupported file format")
+        raise ValueError(f"Unsupported file format: {file_extension}")
 
 def create_visualization(df, viz_type, column=None):
     """Create visualization and return base64 encoded image"""
     plt.figure(figsize=(10, 6))
     
-    if viz_type == 'histogram' and column:
+    if viz_type == 'histogram' and column and pd.api.types.is_numeric_dtype(df[column]):
         sns.histplot(df[column], kde=True, color='#8B5CF6')
         plt.title(f'Distribution of {column}')
     elif viz_type == 'countplot' and column:
-        sns.countplot(x=column, data=df, palette='viridis')
+        sns.countplot(x=column, data=df, palette='viridis', order=df[column].value_counts().iloc[:15].index) # Top 15 categories
         plt.title(f'Count of {column}')
         plt.xticks(rotation=45, ha='right')
     elif viz_type == 'correlation':
@@ -95,7 +96,6 @@ def upload_file():
             'shape': df.shape,
             'columns': df.columns.tolist(),
             'preview': df.head().to_dict('records'),
-            'missing_values': df.isnull().sum().to_dict(),
         }
         
         return jsonify({
@@ -119,29 +119,17 @@ def process_query():
         return jsonify({"error": f"File not found at path: {file_path}"}), 404
 
     try:
-        # --- THIS IS THE IMPROVED PROMPT ---
-        # We give the agent a more detailed, step-by-step instruction
-        agent_prompt = f"""
-        You are an expert data analyst working with a pandas dataframe.
-        Your task is to answer the following question: '{question}'
-        
-        Follow these steps precisely:
-        1.  The dataframe is already loaded for you. Do not create a sample dataframe.
-        2.  If the user asks about efficiency or 'trips per vehicle', you must first create a new column named 'trips_per_vehicle' by dividing the 'trips' column by the 'active_vehicles' column.
-        3.  After any necessary calculations, perform the main analysis based on the user's question.
-        4.  Your final answer must be a concise, text-based summary of your findings.
-        """
+        df = load_dataset(file_path)
 
-        # Create a specialized CSV agent
-        agent = create_csv_agent(
+        # --- THIS IS THE NEW, MORE POWERFUL AGENT ---
+        agent = create_pandas_dataframe_agent(
             llm,
-            file_path,
+            df, # The agent works directly on the dataframe
             verbose=True,
             allow_dangerous_code=True
         )
         
-        # Run the agent with our new, improved prompt
-        result = agent.invoke(agent_prompt)
+        result = agent.invoke(question)
         
         sql_query = "Agent executed Python code via pandas to find the answer."
         output_text = result.get('output', str(result))
@@ -178,27 +166,15 @@ def create_visualizations():
         
         if numeric_cols:
             hist_image = create_visualization(df, 'histogram', numeric_cols[0])
-            visualizations.append({
-                'type': 'histogram',
-                'title': f'Distribution of {numeric_cols[0]}',
-                'image': hist_image
-            })
+            visualizations.append({'type': 'histogram', 'title': f'Distribution of {numeric_cols[0]}', 'image': hist_image})
         
         if categorical_cols:
             count_image = create_visualization(df, 'countplot', categorical_cols[0])
-            visualizations.append({
-                'type': 'countplot',
-                'title': f'Count by {categorical_cols[0]}',
-                'image': count_image
-            })
+            visualizations.append({'type': 'countplot', 'title': f'Count by {categorical_cols[0]}', 'image': count_image})
             
         if len(numeric_cols) > 1:
             corr_image = create_visualization(df, 'correlation')
-            visualizations.append({
-                'type': 'correlation',
-                'title': 'Correlation Matrix',
-                'image': corr_image
-            })
+            visualizations.append({'type': 'correlation', 'title': 'Correlation Matrix', 'image': corr_image})
             
         return jsonify({
             'success': True,

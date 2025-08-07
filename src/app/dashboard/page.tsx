@@ -174,16 +174,16 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen text-white">
-      <nav className="bg-black/30 border-b border-white/10 backdrop-blur-lg sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="border-white/10 backdrop-blur-lg sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12">
             <div className="flex justify-between h-16">
                 <div className="flex items-center">
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">DatumSage</h1>
+                    <h1 className=" mt-5 ml-9 text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 text-transparent bg-clip-text">DatumSage</h1>
                 </div>
-                <div className="flex items-center">
+                {/* <div className="flex items-center">
                     <span className="text-sm text-gray-300 mr-4 hidden sm:block">{userEmail}</span>
                     <button onClick={handleLogout} className="px-3 py-2 text-sm font-medium bg-white/10 rounded-md hover:bg-white/20 transition-colors">Logout</button>
-                </div>
+                </div> */}
             </div>
         </div>
       </nav>
@@ -275,7 +275,8 @@ export default function DashboardPage() {
           {!selectedDataset && (
             <>
               <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg" style={{ boxShadow: '0 4px 24px 0 rgba(0,0,255,0.5)' }}>
-                <h2 className="text-2xl font-semibold mb-4">Upload New Dataset</h2>
+                <h2 className="text-2xl mt-5 font-semibold mb-4">Upload File</h2>
+                <p className="text-gray-400 mb-6">Upload a CSV, TSV, or Excel file to begin your analysis.</p>
                 <form onSubmit={handleUpload}>
                   <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
                     <input type="file" onChange={handleFileChange} className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-white/10 file:text-white hover:file:bg-white/20" accept=".csv,.xlsx,.tsv" />
@@ -287,7 +288,7 @@ export default function DashboardPage() {
                 {uploadStatus && <p className="mt-4 text-sm text-gray-400">{uploadStatus}</p>}
               </div>
 
-              <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
+              {/* <div className="bg-black/30 p-8 rounded-lg backdrop-blur-lg border border-white/10 shadow-lg">
                 <h2 className="text-2xl font-semibold">Your Datasets</h2>
                 <div className="mt-4">
                   {datasets.length === 0 ? (
@@ -310,7 +311,7 @@ export default function DashboardPage() {
                     </ul>
                   )}
                 </div>
-              </div>
+              </div> */}
             </>
           )}
         </div>
