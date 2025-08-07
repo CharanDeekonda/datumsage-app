@@ -7,4 +7,9 @@ flask-cors
 pandas
 tabulate
 openpyxl
+seaborn
+matplotlib
+numpy
+scikit-learn
+scipy  
 gunicorn
