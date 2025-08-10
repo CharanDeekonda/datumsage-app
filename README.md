@@ -2,7 +2,7 @@
 
 DatumSage is a full-stack, multi-user web application that empowers users to analyze and visualize their data through natural language conversation. It leverages a powerful AI agent to understand user queries, perform complex data analysis on uploaded datasets (CSV, TSV, XLSX), and generate insightful summaries and charts, making data science accessible to everyone.
 
-![DatumSage Dashboard Screenshot](https://i.imgur.com/your-screenshot-url.png) 
+![DatumSage Dashboard Screenshot](https://github.com/CharanDeekonda/datumsage-app/blob/master/Screenshots/Dashboard.png) 
 *(Note: You should replace this with a real screenshot of your dashboard)*
 
 ---
